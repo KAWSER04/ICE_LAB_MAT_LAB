@@ -1,100 +1,92 @@
 clear;
-clc;
 
-bits = [1 0 0 0 0 1];
-bitrate = 1;
-T = length(bits)/bitrate;
-n = 1000;
-N = n*length(bits);
-dt = T/N;
-t = 0:dt:T;
-x = zeros(1,length(t));
-previous = -1;
-for i = 0:length(bits)-1
-    if(bits(i+1)) == 1
-        if previous == 1
-            x(i*n+1:(i+1)*n) = -1;
-            previous = -1;
-        else if (previous == -1)
-            x(i*n+1:(i+1)*n) = 1;
-            previous = 1;
-            end
-        end
-    else
-        x(i*n+1:(i+1)*n) =0;
-    end
-end
-count=0;
-one=0;
-previous = -1;
-for i = 0:length(bits)-1
+bits = [0,1,0,0,1,0,0,0,1,0,0,0,0,1,0,1,0,1,0];
+
+bit_rate=1;
+voltage=5;
+tmp = voltage;
+sign = -1;
+mrk = 1;
+voltage = sign*voltage;
+cn0=0;
+cn1=0;
+in = 0;
+
+for i = 1:length(bits)
     
-    if(bits(i+1)) == 1
-        one=one+1;
-        if previous == 1
-            x(i*n+1:(i+1)*n) = -1;
-            previous = -1;
-        else if (previous == -1)
-            x(i*n+1:(i+1)*n) = 1;
-            previous = 1;
-            end
-        end
-
+    if bits(i) == 0
+        cn0 = cn0+1;
     else
-        x(i*n+1:(i+1)*n) =0;
-        count=count+1;
-        
-        
-            if(count==4)
-               
-                    if(rem( one,2 )==0 && previous == 1)
-                        
-                        x((i-3)*n+1:(i-2)*n) =-1;
-                        x(i*n+1:(i+1)*n) =-1;
-                        count=0;
-     
-                    else if((rem( one,2 )==1) && previous == 1)
-                    
-                        x(i*n+1:(i+1)*n) =1;
-                        count=0;
-
-                        else if(rem( one,2 )==1 && previous == -1)
-                        x((i-3)*n+1:(i-2)*n) =-1;
-                        count=0;
-           
-                            else if(rem( one,2 )==0 && previous == -1)
-                        x((i-3)*n+1:(i-2)*n) =1;
-                        x(i*n+1:(i+1)*n) =1;
-                        count=0;
-             
-                    end
-                    end
-                    end
-                    end
-                end
-        
-        
-        end
-end
-
-
-plot(t,x,'LineWidth',3);
-grid on;
-a = x;
-x = 0;
-for i=1:length(t)
-    if t(i)>x
-        x = x + 1;
-        if(a(i)==1)
-            ans_bits(x) = a(i);
-        else if (a(i)==-1)
-                ans_bits(x) = 1;
+        cn1=cn1+1;
+        cn0=0;
+    end
+    
+    if cn0>3
+        if mod(cn1,2)==0
+            y_level(i) = -voltage;
+            voltage=y_level(i);
+            y_level(i-3) = voltage;
         else
-            ans_bits(x) = 0;
-            end
+            y_level(i) = voltage;
         end
+        cn0=0;
+        c1=0;
+    elseif bits(i)==0
+        y_level(i) = 0;
+    else 
+        y_level(i) = -voltage;
+        voltage=y_level(i);
     end
 end
-disp('AMI Decoding: ')
-disp(bits)
+
+voltage=tmp;
+Time=length(bits)/bit_rate; 
+frequency = 1000;
+time = 0:.01:Time;
+x = 1;
+
+for i = 1:length(time)
+    y_value(i)= y_level(x);
+    if time(i)*bit_rate>=x
+        x= x+1;
+    end
+end
+     
+plot(time,y_value);
+axis([0 Time -voltage-2 voltage+2]);
+
+
+% demodulation
+
+
+
+% demodulation
+
+i=1;
+in=1;
+tmp=sign;
+
+for j=1:length(time)
+  dm(i) = y_value(j)/voltage;
+  if time(j)*bit_rate>=i 
+      if dm(i)==0
+        ans_bits(in)=0;
+      else
+        ans_bits(in)=1;
+        if tmp== dm(i)&&i>3
+            ans_bits(in) = 0;
+            ans_bits(in-3) = 0;
+        end
+      end 
+      
+      if dm(i)~=0
+        tmp = dm(i);
+      end
+      i=i+1;
+      in= in+1;
+  end
+end
+ 
+
+disp('Demodulation : ')
 disp(ans_bits)
